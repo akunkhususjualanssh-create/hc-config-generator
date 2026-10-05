@@ -102,6 +102,25 @@
     <input type="text" id="hcnote" placeholder="contoh: khusus axis 0p | hc: 20.20.20.1">
     <label>⏳ Masa Aktif Config</label>
     <input type="text" id="expiry" placeholder="2027-12-31 (kosong = selamanya)">
+    <label>📦 Versi HTTP Custom (kunci enkripsi config)</label>
+    <select id="hckey">
+      <option value="hc_reborn_4">v5.x terbaru (5.11.29-RC90 & setara) — default</option>
+      <option value="hc_reborn_5">v5.x alternatif 5</option>
+      <option value="hc_reborn_6">v5.x alternatif 6</option>
+      <option value="hc_reborn_7">v5.x alternatif 7</option>
+      <option value="keY_secReaT_ePr4">ePro 4</option>
+      <option value="keY_secReaT_ePr3">ePro 3</option>
+      <option value="keY_secReaT_ePr2">ePro 2</option>
+      <option value="keY_secReaT_ePr1">ePro 1</option>
+      <option value="keY_secReaT_ePr0">ePro 0</option>
+      <option value="hc_reborn10">hc_reborn10 (lama)</option>
+      <option value="hc_reborn9">hc_reborn9 (lama)</option>
+      <option value="hc_reborn8">hc_reborn8 (lama)</option>
+      <option value="hc_reborn7">hc_reborn7 (lama)</option>
+      <option value="hc_reborn___7">beta 2.6</option>
+      <option value="hc_reborn_tester_5">beta tester 2.5</option>
+    </select>
+    <div class="hint">Kalau config gak kebaca di versi kamu, coba pilih kunci lain lalu generate ulang.</div>
   </div>
 
   <button class="btn" onclick="generate()">🚀 GENERATE CONFIG (.hc)</button>
@@ -352,8 +371,14 @@ function buildVals() {
     finalPayload = payload.replaceAll('[host_port]', host + ':' + port);
   }
 
+  const proxyRaw = el('proxy').value.trim();
   const vals = {};
   vals.payload = finalPayload;
+  if (proxyRaw) {
+    // payloadProxyURL = proxy yang dipakai app (format host:port)
+    vals.payloadProxyURL = proxyRaw;
+    vals.unlockRemoteProxy = 'true';
+  }
   vals.sshAddress = host + ':' + port + '@' + user + ':' + pass;
   vals.shouldConnectUsingSSH = 'true';
   vals.udpgwPort = '7300';
@@ -367,7 +392,7 @@ function buildVals() {
 async function generate() {
   const vals = buildVals();
   if (!vals) return;
-  const hc = await encryptHC(vals, 'hc_reborn_4');
+  const hc = await encryptHC(vals, el('hckey').value);
   el('output').value = hc;
   el('outbox').style.display = 'block';
   el('outbox').scrollIntoView({behavior:'smooth'});
