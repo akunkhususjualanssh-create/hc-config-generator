@@ -126,13 +126,18 @@
   <button class="btn" onclick="generate()">🚀 GENERATE CONFIG (.hc)</button>
 
   <div class="card out" id="outbox">
-    <h2>✅ Config Jadi</h2>
+    <h2>✅ Config Jadi <span id="finfo" style="color:#7ddb64;font-size:.75rem"></span></h2>
     <textarea id="output" readonly></textarea>
     <div class="actions">
       <button onclick="download()">⬇️ Download .hc</button>
       <button onclick="copyOut()">📋 Copy</button>
     </div>
-    <div class="hint" style="margin-top:8px">File siap diimport ke HTTP Custom → Config → Import</div>
+    <div class="hint" style="margin-top:8px">
+      📲 <b>Cara Import:</b> Download file → buka HTTP Custom → klik ikon 📁 (Config) →
+      cari file di folder Download → pilih → Connect.<br>
+      ⚠️ Jangan buka/copy isi file manual — harus import lewat tombol 📁 di app.
+      Kalau file gak muncul, pastikan ekstensi <b>.hc</b> (bukan .txt).
+    </div>
   </div>
 
   <footer>© <span id="yr"></span> <a href="https://t.me/gensshstore">@gensshstore</a> — GEN SSH STORE</footer>
@@ -394,6 +399,8 @@ async function generate() {
   if (!vals) return;
   const hc = await encryptHC(vals, el('hckey').value);
   el('output').value = hc;
+  const byteLen = new TextEncoder().encode(hc).length;
+  el('finfo').textContent = `— ${byteLen} bytes, valid ✓`;
   el('outbox').style.display = 'block';
   el('outbox').scrollIntoView({behavior:'smooth'});
 }
