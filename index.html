@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HC Config Generator — GEN SSH STORE</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+  body { background:#0a0e17; color:#e5e9f0; min-height:100vh; padding:20px 12px 60px; }
+  .wrap { max-width:720px; margin:0 auto; }
+  header { text-align:center; margin-bottom:24px; }
+  header h1 { font-size:1.5rem; background:linear-gradient(90deg,#ff7b39,#ffb039); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  header p { color:#8b94a7; font-size:.85rem; margin-top:4px; }
+  .card { background:#131a2a; border:1px solid #232e45; border-radius:14px; padding:18px; margin-bottom:16px; }
+  .card h2 { font-size:.95rem; color:#ffb039; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  label { display:block; font-size:.78rem; color:#8b94a7; margin:10px 0 4px; }
+  input[type=text], textarea, select {
+    width:100%; background:#0d1322; border:1px solid #2a3654; border-radius:8px;
+    padding:10px 12px; color:#e5e9f0; font-size:.9rem; outline:none;
+  }
+  input:focus, textarea:focus, select:focus { border-color:#ff7b39; }
+  textarea { resize:vertical; min-height:70px; font-family:monospace; }
+  .hint { font-size:.7rem; color:#5c6579; margin-top:3px; }
+  .checks { display:flex; flex-wrap:wrap; gap:14px; margin-top:14px; }
+  .check { display:flex; align-items:center; gap:7px; background:#0d1322; border:1px solid #2a3654; border-radius:8px; padding:9px 12px; cursor:pointer; font-size:.85rem; }
+  .check input { accent-color:#ff7b39; width:16px; height:16px; cursor:pointer; }
+  .port-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:.72rem; font-weight:600; margin-left:6px; }
+  .b80 { background:#1d2d1a; color:#7ddb64; }
+  .b443 { background:#3a1d1a; color:#ff7b64; }
+  button.btn {
+    width:100%; padding:14px; border:none; border-radius:10px; font-size:1rem; font-weight:700;
+    background:linear-gradient(90deg,#ff7b39,#ffb039); color:#0a0e17; cursor:pointer; margin-top:6px;
+  }
+  button.btn:active { transform:scale(.98); }
+  .out { margin-top:14px; display:none; }
+  .out textarea { min-height:120px; }
+  .actions { display:flex; gap:10px; margin-top:10px; }
+  .actions button { flex:1; padding:11px; border-radius:9px; border:1px solid #2a3654; background:#0d1322; color:#ffb039; font-weight:600; cursor:pointer; font-size:.85rem; }
+  .note443 { display:none; background:#2a1d0f; border:1px solid #55401a; color:#ffd08a; border-radius:8px; padding:10px; font-size:.78rem; margin-top:10px; }
+  footer { text-align:center; color:#5c6579; font-size:.72rem; margin-top:24px; }
+  footer a { color:#ffb039; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚙️ HC CONFIG GENERATOR</h1>
+    <p>by GEN SSH STORE — buat config HTTP Custom dalam hitungan detik</p>
+  </header>
+
+  <div class="card">
+    <h2>👤 Akun SSH</h2>
+    <label>Format: host:port@user:pass</label>
+    <input type="text" id="ssh" placeholder="ssh.web.id:80@gajwj:128" oninput="parseSSH(this.value)">
+    <div class="hint">Auto-parse — host, port, user & password terpisah otomatis</div>
+
+    <label>Host / Bug</label>
+    <input type="text" id="host" placeholder="ssh.web.id">
+    <label>Port <span class="port-badge b80" id="badge">80</span></label>
+    <input type="text" id="port" placeholder="80" oninput="updateBadge(this.value)">
+    <label>User</label>
+    <input type="text" id="user" placeholder="gajwj">
+    <label>Password</label>
+    <input type="text" id="pass" placeholder="128">
+  </div>
+
+  <div class="card">
+    <h2>🛰️ Proxy & Payload</h2>
+    <label>Proxy IP/Host</label>
+    <input type="text" id="proxy" placeholder="128.199.x.x">
+    <label>Proxy Port</label>
+    <input type="text" id="proxyport" placeholder="8080">
+    <label>Payload</label>
+    <textarea id="payload" placeholder="GET / HTTP/1.1[cr][lf]Host: bug.com[cr][lf]Connection: Keep-Alive[cr][lf][cr][lf]"></textarea>
+    <div class="hint">Isi payload sendiri — gunakan [cr][lf] untuk newline</div>
+  </div>
+
+  <div class="card">
+    <h2>🎛️ Opsi</h2>
+    <div class="checks">
+      <label class="check"><input type="checkbox" id="ssl" onchange="sslToggle()"> 🔒 SSL</label>
+      <label class="check"><input type="checkbox" id="usepayload" checked> 📝 Use Payload</label>
+      <label class="check"><input type="checkbox" id="dns"> 🌐 Enable DNS</label>
+    </div>
+    <div class="note443" id="note443">
+      ⚡ <b>Mode 443 terdeteksi</b>: SSL aktif otomatis disarankan. Centang <b>SSL + Use Payload</b> bersamaan untuk combo SNI + payload.
+    </div>
+    <label style="margin-top:14px">📝 Note / HC (catatan kamu)</label>
+    <input type="text" id="hcnote" placeholder="contoh: khusus axis 0p | hc: 20.20.20.1">
+  </div>
+
+  <button class="btn" onclick="generate()">🚀 GENERATE CONFIG</button>
+
+  <div class="card out" id="outbox">
+    <h2>✅ Config Jadi (.hcp)</h2>
+    <textarea id="output" readonly></textarea>
+    <div class="actions">
+      <button onclick="download()">⬇️ Download .hcp</button>
+      <button onclick="copyOut()">📋 Copy</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Note: buka file di HTTP Custom → config langsung kebaca</div>
+  </div>
+
+  <footer>© <span id="yr"></span> <a href="https://t.me/gensshstore">@gensshstore</a> — GEN SSH STORE</footer>
+</div>
+
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+function parseSSH(v) {
+  if (!v.includes('@') || !v.includes(':')) return;
+  const credPart = v.split('@');
+  const hostport = credPart[0].split(':');
+  const creds = credPart.slice(1).join('@').split(':');
+  if (hostport.length >= 2) {
+    document.getElementById('host').value = hostport[0];
+    document.getElementById('port').value = hostport[1];
+    updateBadge(hostport[1]);
+  }
+  if (creds.length >= 2) {
+    document.getElementById('user').value = creds[0];
+    document.getElementById('pass').value = creds.slice(1).join(':');
+  }
+}
+function updateBadge(v) {
+  const b = document.getElementById('badge');
+  const n = parseInt(v) || 0;
+  b.textContent = v || '80';
+  b.className = 'port-badge ' + (n === 443 ? 'b443' : 'b80');
+  document.getElementById('note443').style.display = (n === 443) ? 'block' : 'none';
+}
+function sslToggle() {
+  if (document.getElementById('ssl').checked && parseInt(document.getElementById('port').value) !== 443) {
+    // biarkan bebas — user tau portnya
+  }
+}
+
+function generate() {
+  const host = document.getElementById('host').value.trim();
+  const port = document.getElementById('port').value.trim() || '80';
+  const user = document.getElementById('user').value.trim();
+  const pass = document.getElementById('pass').value.trim();
+  const proxy = document.getElementById('proxy').value.trim();
+  const proxyport = document.getElementById('proxyport').value.trim();
+  const payload = document.getElementById('payload').value.trim();
+  const useSSL = document.getElementById('ssl').checked;
+  const usePay = document.getElementById('usepayload').checked;
+  const dns = document.getElementById('dns').checked;
+  const note = document.getElementById('hcnote').value.trim();
+
+  if (!host) return alert('Isi host dulu bro!');
+  if (!user || !pass) return alert('Isi user & password!');
+
+  // HTTP Custom .hcp = base64 dari pasangan key=value dipisah ';'
+  // Format standar yang dikenali HTTP Custom:
+  const parts = [];
+
+  // Remote proxy: kalau proxy diisi = mode proxy, kalau kosong = langsung ke ssh host
+  if (proxy) {
+    parts.push('HTTP_PROTOCOL=HTTP');
+    parts.push('PROXY_IP=' + proxy);
+    parts.push('PROXY_PORT=' + (proxyport || '8080'));
+    parts.push('PROXY_SSL=' + (useSSL ? 'true' : 'false'));
+  } else {
+    parts.push('HTTP_PROTOCOL=' + (useSSL ? 'HTTPS' : 'HTTP'));
+  }
+
+  // Remote host (ssh server): host:port@user:pass
+  parts.push('REMOTE_HOST=' + host);
+  parts.push('REMOTE_PORT=' + port);
+  parts.push('SSH_USER=' + user);
+  parts.push('SSH_PASSWORD=' + pass);
+
+  // Payload
+  parts.push('PAYLOAD=' + payload);
+  parts.push('USE_PAYLOAD=' + (usePay ? 'true' : 'false'));
+  parts.push('USE_SSL=' + (useSSL ? 'true' : 'false'));
+  parts.push('ENABLE_DNS=' + (dns ? 'true' : 'false'));
+  if (useSSL) parts.push('SNI=' + host);
+
+  // Note/HC masuk sebagai bagian config
+  if (note) parts.push('NOTE=' + note);
+
+  const raw = parts.join(';');
+  const b64 = btoa(unescape(encodeURIComponent(raw)));
+  document.getElementById('output').value = b64;
+  document.getElementById('outbox').style.display = 'block';
+  document.getElementById('outbox').scrollIntoView({behavior:'smooth'});
+}
+
+let currentName = 'config';
+function download() {
+  const b64 = document.getElementById('output').value;
+  if (!b64) return;
+  const note = document.getElementById('hcnote').value.trim().replace(/[^a-z0-9]+/gi,'-').slice(0,25);
+  const host = document.getElementById('host').value.trim().split('.')[0] || 'config';
+  const fname = (note ? note : 'HC-' + host) + '.hcp';
+  const blob = new Blob([b64], {type:'application/octet-stream'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function copyOut() {
+  const t = document.getElementById('output');
+  t.select();
+  navigator.clipboard.writeText(t.value).then(()=>{}, ()=>{document.execCommand('copy')});
+}
+</script>
+</body>
+</html>
