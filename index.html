@@ -102,12 +102,16 @@
     <input type="text" id="hcnote" placeholder="contoh: khusus axis 0p | hc: 20.20.20.1">
     <label>⏳ Masa Aktif Config</label>
     <input type="text" id="expiry" placeholder="2027-12-31 (kosong = selamanya)">
-    <label>📦 Versi HTTP Custom (kunci enkripsi config)</label>
-    <select id="hckey">
-      <option value="hc_reborn_4">v5.x terbaru (5.11.29-RC90 & setara) — default</option>
+    <label>📦 Mode Kompatibilitas</label>
+    <select id="hckey" onchange="keyNote()">
+      <option value="auto">🔄 AUTO — coba semua versi (download 3 file)</option>
+      <option value="hc_reborn_4">v5.x — 5.11.29-RC90 & setara (default)</option>
       <option value="hc_reborn_5">v5.x alternatif 5</option>
       <option value="hc_reborn_6">v5.x alternatif 6</option>
       <option value="hc_reborn_7">v5.x alternatif 7</option>
+      <option value="hc_reborn_3">v4.x alternatif 3</option>
+      <option value="hc_reborn_2">v4.x alternatif 2</option>
+      <option value="hc_reborn_1">v4.x alternatif 1</option>
       <option value="keY_secReaT_ePr4">ePro 4</option>
       <option value="keY_secReaT_ePr3">ePro 3</option>
       <option value="keY_secReaT_ePr2">ePro 2</option>
@@ -117,9 +121,8 @@
       <option value="hc_reborn9">hc_reborn9 (lama)</option>
       <option value="hc_reborn8">hc_reborn8 (lama)</option>
       <option value="hc_reborn7">hc_reborn7 (lama)</option>
-      <option value="hc_reborn___7">beta 2.6</option>
-      <option value="hc_reborn_tester_5">beta tester 2.5</option>
     </select>
+    <div class="hint" id="keynote">AUTO = download 3 file (.hc, .hcp, .hc.txt) — pasti ada yang kebaca di versi manapun.</div>
     <div class="hint">Kalau config gak kebaca di versi kamu, coba pilih kunci lain lalu generate ulang.</div>
   </div>
 
@@ -394,29 +397,57 @@ function buildVals() {
   return vals;
 }
 
+let lastVals = null;
 async function generate() {
   const vals = buildVals();
   if (!vals) return;
-  const hc = await encryptHC(vals, el('hckey').value);
+  lastVals = vals;
+  const mode = el('hckey').value;
+  const hc = await encryptHC(vals, mode === 'auto' ? 'hc_reborn_4' : mode);
   el('output').value = hc;
   const byteLen = new TextEncoder().encode(hc).length;
   el('finfo').textContent = `— ${byteLen} bytes, valid ✓`;
   el('outbox').style.display = 'block';
   el('outbox').scrollIntoView({behavior:'smooth'});
 }
+function keyNote() {
+  const auto = el('hckey').value === 'auto';
+  el('keynote').textContent = auto
+    ? 'AUTO = download 3 file (.hc, .hcp, .hc.txt) — pasti ada yang kebaca di versi manapun.'
+    : 'Kalau config gak kebaca, coba pilih kunci lain lalu generate ulang.';
+}
 
-function download() {
-  const data = el('output').value;
-  if (!data) return;
-  const note = el('hcnote').value.trim().replace(/[^a-z0-9]+/gi,'-').slice(0,22);
-  const host = el('host').value.trim().split('.')[0] || 'config';
-  const fname = (note ? note : 'HC-' + host) + '.hc';
+function saveFile(data, fname) {
   const blob = new Blob([data], {type:'application/octet-stream'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = fname;
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 500);
+}
+function baseName() {
+  const note = el('hcnote').value.trim().replace(/[^a-z0-9]+/gi,'-').slice(0,22);
+  const host = el('host').value.trim().split('.')[0] || 'config';
+  return note ? note : 'HC-' + host;
+}
+function download() {
+  const data = el('output').value;
+  if (!data) return;
+  const auto = el('hckey').value === 'auto';
+  if (auto && lastVals) {
+    // 3 file: hc_reborn_4 (.hc), ePro4 (.hcp), te4Z11 (.hc.txt) - covers new/old/beta
+    (async () => {
+      const v1 = await encryptHC(lastVals, 'hc_reborn_4');
+      const v2 = await encryptHC(lastVals, 'keY_secReaT_ePr4');
+      const v3 = await encryptHC(lastVals, 'keY_secReaT_te4Z11');
+      const b = baseName();
+      saveFile(v1, b + '.hc');
+      setTimeout(() => saveFile(v2, b + '-alt.hcp'), 400);
+      setTimeout(() => saveFile(v3, b + '-alt2.hc.txt'), 800);
+    })();
+  } else {
+    saveFile(data, baseName() + '.hc');
+  }
 }
 function copyOut() {
   const t = el('output');
